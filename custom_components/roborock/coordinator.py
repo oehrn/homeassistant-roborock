@@ -50,16 +50,17 @@ class RoborockDataUpdateCoordinator(
             1, lambda: asyncio.create_task(self.async_refresh())
         )
 
-    def release(self) -> None:
+    async def async_release(self) -> None:
         """Disconnect from API."""
         if self.scheduled_refresh:
             self.scheduled_refresh.cancel()
-        self.api.sync_disconnect()
+        await self.api.async_disconnect()
         if self.api != self.map_api:
             try:
-                self.map_api.sync_disconnect()
+                await self.map_api.async_disconnect()
             except RoborockException:
                 _LOGGER.warning("Failed to disconnect from map api")
+
 
     async def fill_device_prop(self, device_info: RoborockHassDeviceInfo) -> None:
         """Get device properties."""
