@@ -319,7 +319,14 @@ class RoborockOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize HACS options flow."""
-        self.config_entry = config_entry
+
+        # In newer Home Assistant cores, OptionsFlow exposes `config_entry` as a read-only property.
+        # Assigning to `self.config_entry` raises: "property 'config_entry' ... has no setter".
+        try:
+            super().__init__(config_entry)
+        except TypeError:
+            # Very old HA cores didn't define OptionsFlow.__init__.
+            object.__setattr__(self, "_config_entry", config_entry)
         self.options = dict(config_entry.options)
         self.discovered_devices = None
 
