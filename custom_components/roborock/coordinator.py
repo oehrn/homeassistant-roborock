@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from roborock.version_1_apis import RoborockClientV1 as RoborockClient
 from roborock.version_1_apis import RoborockMqttClientV1 as RoborockMqttClient
+from roborock.version_1_apis import RoborockLocalClientV1 as RoborockLocalClient
 from roborock.containers import HomeDataRoom, MultiMapsList, RoborockBase
 from roborock.exceptions import RoborockException
 
@@ -79,6 +80,8 @@ class RoborockDataUpdateCoordinator(
 
     async def fill_room_mapping(self, device_info: RoborockHassDeviceInfo) -> None:
         """Build the room mapping - only works for local api."""
+        if not isinstance(self.api, RoborockLocalClient):
+            return
         if device_info.room_mapping is None:
             room_mapping = await self.api.get_room_mapping()
             if room_mapping:
@@ -90,12 +93,15 @@ class RoborockDataUpdateCoordinator(
 
     async def fill_device_multi_maps_list(self, device_info: RoborockHassDeviceInfo) -> None:
         """Get multi maps list."""
+        if not isinstance(self.api, RoborockLocalClient):
+            return
         if device_info.map_mapping is None:
             multi_maps_list = await self.api.get_multi_maps_list()
             if multi_maps_list:
                 map_mapping = {
                     map_info.mapFlag: map_info.name for map_info in multi_maps_list.map_info}
                 device_info.map_mapping = map_mapping
+
 
     async def fill_device_info(self, device_info: RoborockHassDeviceInfo):
         """Merge device information."""

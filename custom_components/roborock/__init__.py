@@ -135,17 +135,44 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return_exceptions=True
     )
 
-    success_coordinators = []
+    success_coordinators: list[RoborockDataUpdateCoordinator] = []
+    devices_to_remove: list[str] = []
+
     for device_id, device_entry_data in devices_entry_data.items():
-        _coordinator = device_entry_data["coordinator"]
+        _coordinator: RoborockDataUpdateCoordinator = device_entry_data["coordinator"]
+
+        # If local polling fails (timeouts etc.), fall back to the cloud (MQTT) client.
+        # This keeps the integration usable in networks where the robot is not reachable locally.
+        if (
+            not cloud_integration
+            and not _coordinator.last_update_success
+            and _coordinator.api is not _coordinator.map_api
+        ):
+            _LOGGER.warning(
+                "Device %s not reachable locally; retrying via cloud (MQTT) client",
+                device_id,
+            )
+            try:
+                await _coordinator.api.async_disconnect()
+            except RoborockException:
+                _LOGGER.debug("Failed to disconnect local client before cloud fallback")
+
+            _coordinator.api = _coordinator.map_api
+            try:
+                await _coordinator.async_refresh()
+            except Exception:
+                _LOGGER.debug("Cloud fallback refresh failed for device %s", device_id)
+
         if not _coordinator.last_update_success:
             await _coordinator.async_release()
-            devices_entry_data[device_id] = None
+            devices_to_remove.append(device_id)
         else:
             success_coordinators.append(_coordinator)
 
+    for device_id in devices_to_remove:
+        devices_entry_data.pop(device_id, None)
+
     if len(success_coordinators) == 0:
-        # Don't start if no coordinators succeeded.
         raise ConfigEntryNotReady("There are no devices that can currently be reached.")
 
     await hass.config_entries.async_forward_entry_setups(entry, platforms)
