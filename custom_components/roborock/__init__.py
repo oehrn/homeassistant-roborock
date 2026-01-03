@@ -136,8 +136,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     success_coordinators: list[RoborockDataUpdateCoordinator] = []
-    devices_to_remove: list[str] = []
-
     for device_id, device_entry_data in devices_entry_data.items():
         _coordinator: RoborockDataUpdateCoordinator = device_entry_data["coordinator"]
 
@@ -164,17 +162,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _LOGGER.debug("Cloud fallback refresh failed for device %s", device_id)
 
         if not _coordinator.last_update_success:
-            await _coordinator.async_release()
-            devices_to_remove.append(device_id)
+            _LOGGER.warning(
+                "Device %s not reachable during setup; keeping it and continuing (will retry updates later)",
+                device_id,
+            )
         else:
             success_coordinators.append(_coordinator)
-
-    for device_id in devices_to_remove:
-        devices_entry_data.pop(device_id, None)
-
     if len(success_coordinators) == 0:
-        raise ConfigEntryNotReady("There are no devices that can currently be reached.")
-
+        _LOGGER.warning(
+            "No devices reachable during setup; continuing anyway. Entities will be unavailable until a successful update."
+        )
     await hass.config_entries.async_forward_entry_setups(entry, platforms)
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
