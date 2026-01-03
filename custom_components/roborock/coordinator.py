@@ -104,18 +104,23 @@ class RoborockDataUpdateCoordinator(
 
 
     async def fill_device_info(self, device_info: RoborockHassDeviceInfo):
-        """Merge device information."""
-        await asyncio.gather(
-            *([
-                self.fill_device_prop(device_info),
-                asyncio.gather(
-                    *([
-                        self.fill_device_multi_maps_list(device_info),
-                        self.fill_room_mapping(device_info),
-                    ]), return_exceptions=True
-                )
-            ])
-        )
+        """Merge device information.
+
+        Local V1 communication can break when multiple RPCs are in-flight at once
+        (symptoms: timeouts, connection resets, and "Attempting to create a future with an existing id").
+        Serialize calls per device during refresh.
+        """
+        await self.fill_device_prop(device_info)
+
+        # Best-effort extras; don't fail the whole update if these explode
+        for coro in (
+            self.fill_device_multi_maps_list(device_info),
+            self.fill_room_mapping(device_info),
+        ):
+            try:
+                await coro
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.debug("Non-fatal error while fetching mapping data", exc_info=True)
 
     async def _async_update_data(self) -> RoborockHassDeviceInfo:
         """Update data via library."""
