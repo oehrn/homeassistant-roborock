@@ -2,34 +2,44 @@ name: "Release"
 
 on:
   release:
-    types:
-      - "published"
+    types: ["published"]
 
 permissions: {}
 
 jobs:
   release:
-    name: "Release"
+    name: "Build & Upload roborock.zip"
     runs-on: "ubuntu-latest"
     permissions:
       contents: write
+
     steps:
-      - name: "Checkout the repository"
-        uses: "actions/checkout@v3.5.3"
+      - name: "Checkout"
+        uses: "actions/checkout@v4"
 
-      - name: "Adjust version number"
-        shell: "bash"
+      - name: "Set manifest version from tag"
+        shell: bash
         run: |
-          yq -i -o json '.version="${{ github.event.release.tag_name }}"' \
-            "${{ github.workspace }}/custom_components/roborock/manifest.json"
+          python - <<'PY'
+          import json, os
+          tag = os.environ["GITHUB_REF_NAME"]
+          path = "custom_components/roborock/manifest.json"
+          with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+          data["version"] = tag
+          with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+          print(f"Set manifest version to {tag}")
+          PY
 
-      - name: "ZIP the integration directory"
-        shell: "bash"
+      - name: "Zip integration"
+        shell: bash
         run: |
-          cd "${{ github.workspace }}/custom_components/roborock"
-          zip roborock.zip -r ./
+          cd custom_components/roborock
+          zip -r roborock.zip ./
 
-      - name: "Upload the ZIP file to the release"
-        uses: softprops/action-gh-release@v0.1.15
+      - name: "Upload asset to release"
+        uses: "softprops/action-gh-release@v2"
         with:
-          files: ${{ github.workspace }}/custom_components/roborock/roborock.zip
+          files: "custom_components/roborock/roborock.zip"
