@@ -4,7 +4,6 @@ on:
   release:
     types:
       - "published"
-  workflow_dispatch:
 
 permissions: {}
 
@@ -16,38 +15,21 @@ jobs:
       contents: write
     steps:
       - name: "Checkout the repository"
-        uses: "actions/checkout@v4"
+        uses: "actions/checkout@v3.5.3"
 
-      - name: "Derive version (strip leading v)"
-        id: version
+      - name: "Adjust version number"
         shell: "bash"
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          VERSION="${TAG#v}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Using VERSION=$VERSION (from TAG=$TAG)"
+          yq -i -o json '.version="${{ github.event.release.tag_name }}"' \
+            "${{ github.workspace }}/custom_components/roborock/manifest.json"
 
-      - name: "Adjust manifest version"
-        shell: "bash"
-        run: |
-          python3 - <<'PY'
-          import json, pathlib, os
-          manifest = pathlib.Path("custom_components/roborock/manifest.json")
-          data = json.loads(manifest.read_text(encoding="utf-8"))
-          data["version"] = os.environ["VERSION"]
-          manifest.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-          PY
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-
-      - name: "Zip the integration directory"
+      - name: "ZIP the integration directory"
         shell: "bash"
         run: |
           cd "${{ github.workspace }}/custom_components/roborock"
-          zip -r "${{ github.workspace }}/roborock.zip" ./
+          zip roborock.zip -r ./
 
-      - name: "Upload ZIP to release"
-        uses: softprops/action-gh-release@v2
+      - name: "Upload the ZIP file to the release"
+        uses: softprops/action-gh-release@v0.1.15
         with:
-          files: roborock.zip
+          files: ${{ github.workspace }}/custom_components/roborock/roborock.zip
