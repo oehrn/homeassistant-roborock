@@ -1,3 +1,4 @@
-# Documentation
+# docs/
 
-- `info.md` — HACS / project info page content
+Entry point: `index.md`  
+HACS info page content: `info.md`
