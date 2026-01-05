@@ -1,6 +1,7 @@
 """Typing for Roborock integration."""
+
 from dataclasses import dataclass
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 from roborock import DeviceData, DeviceProp
 
@@ -26,8 +27,8 @@ class ConfigEntryData(TypedDict):
 class RoborockHassDeviceInfo(DeviceData):
     """Define a help class to carry device information."""
 
-    props: Optional[DeviceProp] = None
-    is_map_valid: Optional[bool] = False
-    map_mapping: Optional[dict[int, str]] = None
-    room_mapping: Optional[dict[int, str]] = None
-    current_room: Optional[int] = None
+    props: DeviceProp | None = None
+    is_map_valid: bool | None = False
+    map_mapping: dict[int, str] | None = None
+    room_mapping: dict[int, str] | None = None
+    current_room: int | None = None

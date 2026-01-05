@@ -1,8 +1,8 @@
 """Support for Roborock device base class."""
+
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import DeviceInfo, Entity
@@ -26,10 +26,10 @@ class RoborockEntity(Entity):
     _attr_has_entity_name = True
 
     def __init__(
-            self,
-            device_info: RoborockHassDeviceInfo,
-            unique_id: str,
-            api: RoborockClient,
+        self,
+        device_info: RoborockHassDeviceInfo,
+        unique_id: str,
+        api: RoborockClient,
     ) -> None:
         """Initialize the coordinated Roborock Device."""
         self._device_name = device_info.device.name
@@ -74,10 +74,10 @@ class RoborockEntity(Entity):
         self._device_info.is_map_valid = False
 
     async def send(
-            self,
-            method: RoborockCommand,
-            params: Optional[list | dict] = None,
-            return_type: Optional[type[RT]] = None,
+        self,
+        method: RoborockCommand,
+        params: list | dict | None = None,
+        return_type: type[RT] | None = None,
     ) -> RT:
         """Send a command to a vacuum cleaner."""
         try:
@@ -89,16 +89,18 @@ class RoborockEntity(Entity):
         return response
 
 
-class RoborockCoordinatedEntity(RoborockEntity, CoordinatorEntity[RoborockDataUpdateCoordinator]):
+class RoborockCoordinatedEntity(
+    RoborockEntity, CoordinatorEntity[RoborockDataUpdateCoordinator]
+):
     """Representation of a base a coordinated Roborock Entity."""
 
     _attr_has_entity_name = True
 
     def __init__(
-            self,
-            device_info: RoborockHassDeviceInfo,
-            coordinator: RoborockDataUpdateCoordinator,
-            unique_id: str | None = None,
+        self,
+        device_info: RoborockHassDeviceInfo,
+        coordinator: RoborockDataUpdateCoordinator,
+        unique_id: str | None = None,
     ) -> None:
         """Initialize the coordinated Roborock Device."""
         RoborockEntity.__init__(self, device_info, unique_id, coordinator.api)
@@ -110,10 +112,10 @@ class RoborockCoordinatedEntity(RoborockEntity, CoordinatorEntity[RoborockDataUp
         self._fw_version = device_info.device.fv
 
     async def send(
-            self,
-            method: RoborockCommand,
-            params: Optional[list | dict] = None,
-            return_type: Optional[type[RT]] = None,
+        self,
+        method: RoborockCommand,
+        params: list | dict | None = None,
+        return_type: type[RT] | None = None,
     ) -> RT:
         """Send a command to a vacuum cleaner."""
         response = await super().send(method, params, return_type)
@@ -128,4 +130,3 @@ class RoborockCoordinatedEntity(RoborockEntity, CoordinatorEntity[RoborockDataUp
             self.coordinator.device_info.props.consumable = value
         self.coordinator.data = self.coordinator.device_info.props
         self.schedule_update_ha_state()
-

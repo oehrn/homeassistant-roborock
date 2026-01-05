@@ -1,4 +1,5 @@
 """Constants for Roborock."""
+
 from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
 from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
 from homeassistant.components.calendar import DOMAIN as CALENDAR_DOMAIN
@@ -31,7 +32,17 @@ SENSOR = SENSOR_DOMAIN
 SWITCH = SWITCH_DOMAIN
 TIME = TIME_DOMAIN
 VACUUM = VACUUM_DOMAIN
-PLATFORMS = [BINARY_SENSOR, BUTTON, CAMERA, NUMBER, SELECT, SENSOR, SWITCH, TIME, VACUUM]
+PLATFORMS = [
+    BINARY_SENSOR,
+    BUTTON,
+    CAMERA,
+    NUMBER,
+    SELECT,
+    SENSOR,
+    SWITCH,
+    TIME,
+    VACUUM,
+]
 
 ROCKROBO_V1 = "rockrobo.vacuum.v1"
 ROCKROBO_S4 = "roborock.vacuum.s4"
@@ -51,7 +62,9 @@ ROCKROBO_Q5 = "roborock.vacuum.a34"
 ROCKROBO_Q7_MAX = "roborock.vacuum.a38"
 ROCKROBO_G10S = "roborock.vacuum.a46"
 ROCKROBO_G10 = "roborock.vacuum.a29"
-ROCKROBO_G10_SG = "roborock.vacuum.a30" # Variant of the G10, has similar features as S7
+ROCKROBO_G10_SG = (
+    "roborock.vacuum.a30"  # Variant of the G10, has similar features as S7
+)
 ROCKROBO_S7 = "roborock.vacuum.a15"
 ROCKROBO_S6_MAXV = "roborock.vacuum.a10"
 ROCKROBO_E2 = "roborock.vacuum.e2"

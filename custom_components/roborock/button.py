@@ -1,4 +1,5 @@
 """Support for Roborock button."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -78,9 +79,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Roborock button platform."""
-    domain_data: EntryData = hass.data[DOMAIN][
-        config_entry.entry_id
-    ]
+    domain_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
 
     entities: list[RoborockButtonEntity] = []
     for device_id, device_entry_data in domain_data.get("devices").items():

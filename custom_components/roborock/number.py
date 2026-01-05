@@ -1,4 +1,5 @@
 """Support for Roborock button."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -54,14 +55,12 @@ NUMBER_DESCRIPTIONS = [
 
 
 async def async_setup_entry(
-        hass: HomeAssistant,
-        config_entry: ConfigEntry,
-        async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Roborock button platform."""
-    domain_data: EntryData = hass.data[DOMAIN][
-        config_entry.entry_id
-    ]
+    domain_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
 
     entities: list[RoborockNumberEntity] = []
     for _device_id, device_entry_data in domain_data.get("devices").items():
@@ -85,11 +84,11 @@ class RoborockNumberEntity(RoborockCoordinatedEntity, NumberEntity):
     entity_description: RoborockNumberDescription
 
     def __init__(
-            self,
-            unique_id: str,
-            device_info: RoborockHassDeviceInfo,
-            coordinator: RoborockDataUpdateCoordinator,
-            entity_description: RoborockNumberDescription,
+        self,
+        unique_id: str,
+        device_info: RoborockHassDeviceInfo,
+        coordinator: RoborockDataUpdateCoordinator,
+        entity_description: RoborockNumberDescription,
     ) -> None:
         """Create a button entity."""
         super().__init__(device_info, coordinator, unique_id)
@@ -103,4 +102,6 @@ class RoborockNumberEntity(RoborockCoordinatedEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Set native value."""
         int_value = int(value)
-        await self.entity_description.update_value(self.api.cache.get(self.entity_description.cache_key), int_value)
+        await self.entity_description.update_value(
+            self.api.cache.get(self.entity_description.cache_key), int_value
+        )
