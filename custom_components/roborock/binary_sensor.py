@@ -1,4 +1,5 @@
 """Support for Roborock binary sensors."""
+
 from __future__ import annotations
 
 import logging
@@ -32,6 +33,7 @@ ATTR_MOP_ATTACHED = "is_water_box_carriage_attached"
 ATTR_WATER_BOX_ATTACHED = "is_water_box_attached"
 ATTR_WATER_SHORTAGE = "is_water_shortage"
 ATTR_MOP_DRYING = "dry_status"
+
 
 @dataclass
 class RoborockBinarySensorDescription(BinarySensorEntityDescription):
@@ -94,9 +96,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Only vacuums with mop should have binary sensor registered."""
-    domain_data: EntryData = hass.data[DOMAIN][
-        config_entry.entry_id
-    ]
+    domain_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
 
     entities: list[RoborockBinarySensor] = []
     for _device_id, device_entry_data in domain_data.get("devices").items():

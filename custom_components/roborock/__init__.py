@@ -1,4 +1,5 @@
 """The Roborock component."""
+
 from __future__ import annotations
 
 import asyncio
@@ -47,9 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     vacuum_options = entry.options.get(VACUUM, {})
     integration_options = entry.options.get(DOMAIN, {})
     cloud_integration = integration_options.get(CONF_CLOUD_INTEGRATION, False)
-    include_shared = (
-        vacuum_options.get(CONF_INCLUDE_SHARED, True)
-    )
+    include_shared = vacuum_options.get(CONF_INCLUDE_SHARED, True)
 
     device_network = data.get("device_network", {})
     try:
@@ -69,11 +68,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _LOGGER.debug("Got home data %s", home_data)
 
-    platforms = [platform for platform in PLATFORMS if entry.options.get(platform, True)]
+    platforms = [
+        platform for platform in PLATFORMS if entry.options.get(platform, True)
+    ]
 
     entry_data: EntryData = hass.data.setdefault(DOMAIN, {}).setdefault(
-        entry.entry_id,
-        EntryData(devices={}, platforms=platforms)
+        entry.entry_id, EntryData(devices={}, platforms=platforms)
     )
     devices_entry_data = entry_data["devices"]
 
@@ -83,7 +83,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         else home_data.devices
     )
     if not cloud_integration:
-        devices_without_ip = [_device for _device in devices if _device.duid not in device_network]
+        devices_without_ip = [
+            _device for _device in devices if _device.duid not in device_network
+        ]
         if len(devices_without_ip) > 0:
             device_network.update(await get_local_devices_info())
     for _device in devices:
@@ -100,7 +102,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 model=product.model,
             )
 
-            map_client = await hass.async_add_executor_job(RoborockMqttClient, user_data, device_info)
+            map_client = await hass.async_add_executor_job(
+                RoborockMqttClient, user_data, device_info
+            )
 
             if not cloud_integration:
                 network = device_network.get(device_id)
@@ -119,10 +123,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             data_coordinator = RoborockDataUpdateCoordinator(
                 hass, main_client, map_client, device_info, home_data.rooms
             )
-            path = Path(hass.config.path(STORAGE_PATH.format(key=f"{DOMAIN}.{entry.entry_id}.{slugify(device_id)}")))
+            path = Path(
+                hass.config.path(
+                    STORAGE_PATH.format(
+                        key=f"{DOMAIN}.{entry.entry_id}.{slugify(device_id)}"
+                    )
+                )
+            )
             devices_entry_data[device_id] = {
                 "coordinator": data_coordinator,
-                "calendar": LocalCalendarStore(hass, path)
+                "calendar": LocalCalendarStore(hass, path),
             }
         except RoborockException:
             _LOGGER.warning(f"Failing setting up device {device_id}")
@@ -132,7 +142,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             device_entry_data["coordinator"].async_config_entry_first_refresh()
             for device_entry_data in devices_entry_data.values()
         ),
-        return_exceptions=True
+        return_exceptions=True,
     )
 
     success_coordinators: list[RoborockDataUpdateCoordinator] = []
@@ -195,9 +205,7 @@ async def get_local_devices_info() -> dict[str, DeviceNetwork]:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
-    data: EntryData = hass.data[DOMAIN].get(
-        entry.entry_id
-    )
+    data: EntryData = hass.data[DOMAIN].get(entry.entry_id)
     unloaded = all(
         await asyncio.gather(
             *[

@@ -1,5 +1,6 @@
 """Domain dict for Roborock."""
-from typing import Optional, TypedDict
+
+from typing import TypedDict
 
 from . import RoborockDataUpdateCoordinator
 from .store import LocalCalendarStore
@@ -15,5 +16,5 @@ class DeviceEntryData(TypedDict):
 class EntryData(TypedDict):
     """Define integration entry data."""
 
-    devices: dict[str, Optional[DeviceEntryData]]
+    devices: dict[str, DeviceEntryData | None]
     platforms: list[str]

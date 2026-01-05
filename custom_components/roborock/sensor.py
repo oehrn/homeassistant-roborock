@@ -1,4 +1,5 @@
 """Support for Roborock sensors."""
+
 from __future__ import annotations
 
 import logging
@@ -141,9 +142,11 @@ VACUUM_SENSORS = {
     ),
     f"current_{ATTR_SELECTED_MAP}": RoborockSensorDescription(
         key="map_status",
-        value=lambda value, device_info:
-        slugify(device_info.map_mapping.get((value - 3) // 4))
-        if device_info and device_info.map_mapping else None,
+        value=lambda value, device_info: slugify(
+            device_info.map_mapping.get((value - 3) // 4)
+        )
+        if device_info and device_info.map_mapping
+        else None,
         icon="mdi:floor-plan",
         parent_key="status",
         name="Current selected map",
@@ -153,9 +156,11 @@ VACUUM_SENSORS = {
     f"current_{ATTR_CURRENT_ROOM}": RoborockSensorDescription(
         # TODO: Find a better way of doing this
         key="state",
-        value=lambda _, device_info:
-        slugify(device_info.room_mapping.get(device_info.current_room))
-        if device_info.room_mapping and device_info.current_room else None,
+        value=lambda _, device_info: slugify(
+            device_info.room_mapping.get(device_info.current_room)
+        )
+        if device_info.room_mapping and device_info.current_room
+        else None,
         icon="mdi:floor-plan",
         parent_key="status",
         name="Current room",
@@ -317,14 +322,12 @@ VACUUM_WITH_DOCK_SENSORS = {
 
 
 async def async_setup_entry(
-        hass: HomeAssistant,
-        config_entry: ConfigEntry,
-        async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Roborock vacuum sensors."""
-    domain_data: EntryData = hass.data[DOMAIN][
-        config_entry.entry_id
-    ]
+    domain_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
 
     entities: list[RoborockSensor] = []
     for _device_id, device_entry_data in domain_data.get("devices").items():
@@ -366,11 +369,11 @@ class RoborockSensor(RoborockCoordinatedEntity, SensorEntity):
     entity_description: RoborockSensorDescription
 
     def __init__(
-            self,
-            unique_id: str,
-            device_info: RoborockHassDeviceInfo,
-            coordinator: RoborockDataUpdateCoordinator,
-            description: RoborockSensorDescription,
+        self,
+        unique_id: str,
+        device_info: RoborockHassDeviceInfo,
+        coordinator: RoborockDataUpdateCoordinator,
+        description: RoborockSensorDescription,
     ) -> None:
         """Initialize the entity."""
         SensorEntity.__init__(self)
@@ -382,7 +385,6 @@ class RoborockSensor(RoborockCoordinatedEntity, SensorEntity):
         )
         if (protocol := self.entity_description.protocol_listener) is not None:
             self.api.add_listener(protocol, self._update_from_listener, self.api.cache)
-
 
     @callback
     def _extract_attributes(self, data: DeviceProp):
@@ -433,7 +435,7 @@ class RoborockSensor(RoborockCoordinatedEntity, SensorEntity):
                 device_info = self.coordinator.data
                 native_value = self.entity_description.value(native_value, device_info)
             if self.device_class == SensorDeviceClass.TIMESTAMP and (
-                    native_datetime := datetime.fromtimestamp(native_value)
+                native_datetime := datetime.fromtimestamp(native_value)
             ):
                 native_value = native_datetime.astimezone(dt_util.UTC)
 

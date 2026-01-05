@@ -1,4 +1,5 @@
 """Support for Roborock time."""
+
 from __future__ import annotations
 
 import asyncio
@@ -60,9 +61,8 @@ TIME_DESCRIPTIONS: list[RoborockTimeDescription] = [
             ]
         ),
         get_value=lambda cache: datetime.time(
-            hour=cache.value.get("start_hour"),
-            minute=cache.value.get("start_minute")
-            ),
+            hour=cache.value.get("start_hour"), minute=cache.value.get("start_minute")
+        ),
         entity_category=EntityCategory.CONFIG,
     ),
     RoborockTimeDescription(
@@ -80,8 +80,7 @@ TIME_DESCRIPTIONS: list[RoborockTimeDescription] = [
             ]
         ),
         get_value=lambda cache: datetime.time(
-            hour=cache.value.get("end_hour"),
-            minute=cache.value.get("end_minute")
+            hour=cache.value.get("end_hour"), minute=cache.value.get("end_minute")
         ),
         entity_category=EntityCategory.CONFIG,
     ),
@@ -100,8 +99,7 @@ TIME_DESCRIPTIONS: list[RoborockTimeDescription] = [
             ]
         ),
         get_value=lambda cache: datetime.time(
-            hour=cache.value.get("start_hour"),
-            minute=cache.value.get("start_minute")
+            hour=cache.value.get("start_hour"), minute=cache.value.get("start_minute")
         ),
         entity_category=EntityCategory.CONFIG,
     ),
@@ -120,8 +118,7 @@ TIME_DESCRIPTIONS: list[RoborockTimeDescription] = [
             ]
         ),
         get_value=lambda cache: datetime.time(
-            hour=cache.value.get("end_hour"),
-            minute=cache.value.get("end_minute")
+            hour=cache.value.get("end_hour"), minute=cache.value.get("end_minute")
         ),
         entity_category=EntityCategory.CONFIG,
     ),
@@ -129,13 +126,16 @@ TIME_DESCRIPTIONS: list[RoborockTimeDescription] = [
 
 
 async def async_setup_entry(
-        hass: HomeAssistant,
-        config_entry: ConfigEntry,
-        async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Only vacuums with mop should have binary sensor registered."""
     domain_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
-    coordinators = [device_entry_data["coordinator"] for device_entry_data in domain_data.get("devices").values()]
+    coordinators = [
+        device_entry_data["coordinator"]
+        for device_entry_data in domain_data.get("devices").values()
+    ]
 
     possible_entities: list[
         tuple[RoborockDataUpdateCoordinator, RoborockTimeDescription]
@@ -146,9 +146,11 @@ async def async_setup_entry(
     ]
     # We need to check if this function is supported by the device.
     results = await asyncio.gather(
-        *(coordinator.api.cache.get(description.cache_key).async_value()
-          for coordinator, description in possible_entities),
-        return_exceptions=True
+        *(
+            coordinator.api.cache.get(description.cache_key).async_value()
+            for coordinator, description in possible_entities
+        ),
+        return_exceptions=True,
     )
     valid_entities: list[RoborockTime] = []
     for (coordinator, description), result in zip(possible_entities, results):
@@ -173,11 +175,11 @@ class RoborockTime(RoborockEntity, TimeEntity):
     entity_description: RoborockTimeDescription
 
     def __init__(
-            self,
-            unique_id: str,
-            device_info: RoborockHassDeviceInfo,
-            description: RoborockTimeDescription,
-            api: RoborockClient,
+        self,
+        unique_id: str,
+        device_info: RoborockHassDeviceInfo,
+        description: RoborockTimeDescription,
+        api: RoborockClient,
     ) -> None:
         """Initialize the entity."""
         TimeEntity.__init__(self)
@@ -187,8 +189,12 @@ class RoborockTime(RoborockEntity, TimeEntity):
     @property
     def native_value(self) -> datetime.time | None:
         """Return the value reported by the time."""
-        return self.entity_description.get_value(self.api.cache.get(self.entity_description.cache_key))
+        return self.entity_description.get_value(
+            self.api.cache.get(self.entity_description.cache_key)
+        )
 
     async def async_set_value(self, value: datetime.time) -> None:
         """Set the time."""
-        await self.entity_description.update_value(self.api.cache.get(self.entity_description.cache_key), value)
+        await self.entity_description.update_value(
+            self.api.cache.get(self.entity_description.cache_key), value
+        )
