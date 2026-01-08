@@ -80,6 +80,57 @@ WASHING_MACHINE_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda data: data.get("error", 0),
     ),
+    WashingMachineSensorDescription(
+        key="mode",
+        name="Mode",
+        translation_key="mode",
+        value_fn=lambda data: data.get("mode"),
+    ),
+    WashingMachineSensorDescription(
+        key="program",
+        name="Program",
+        translation_key="program",
+        value_fn=lambda data: data.get("program"),
+    ),
+    WashingMachineSensorDescription(
+        key="temperature",
+        name="Temperature",
+        translation_key="temperature",
+        icon="mdi:thermometer",
+        value_fn=lambda data: data.get("temperature"),
+    ),
+    WashingMachineSensorDescription(
+        key="rinse_times",
+        name="Rinse Times",
+        translation_key="rinse_times",
+        icon="mdi:water-sync",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data.get("rinse_times"),
+    ),
+    WashingMachineSensorDescription(
+        key="spin_level",
+        name="Spin Level",
+        translation_key="spin_level",
+        icon="mdi:sync",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data.get("spin_level"),
+    ),
+    WashingMachineSensorDescription(
+        key="drying_mode",
+        name="Drying Mode",
+        translation_key="drying_mode",
+        icon="mdi:tumble-dryer",
+        value_fn=lambda data: data.get("drying_mode"),
+    ),
+    WashingMachineSensorDescription(
+        key="door_lock",
+        name="Door Lock",
+        translation_key="door_lock",
+        device_class=SensorDeviceClass.ENUM,
+        options=["locked", "unlocked"],
+        icon="mdi:lock",
+        value_fn=lambda data: "locked" if data.get("door_lock") else "unlocked",
+    ),
 ]
 
 
