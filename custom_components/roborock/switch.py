@@ -117,16 +117,25 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Roborock switch platform."""
+    from .coordinator import RoborockWashingMachineCoordinator
+    
     domain_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
     coordinators = [
         device_entry_data["coordinator"]
         for device_entry_data in domain_data.get("devices").values()
     ]
+    
+    # Filter out washing machine coordinators for vacuum switches
+    vacuum_coordinators = [
+        c for c in coordinators 
+        if not isinstance(c, RoborockWashingMachineCoordinator)
+    ]
+    
     possible_entities: list[
         tuple[RoborockDataUpdateCoordinator, RoborockSwitchDescription]
     ] = [
         (coordinator, description)
-        for coordinator in coordinators
+        for coordinator in vacuum_coordinators
         for description in SWITCH_DESCRIPTIONS
     ]
     # We need to check if this function is supported by the device.
@@ -152,6 +161,10 @@ async def async_setup_entry(
                 )
             )
     async_add_entities(valid_entities)
+    
+    # Also set up washing machine switches
+    from .washing_machine_switch import async_setup_entry as async_setup_washing_machine_switches
+    await async_setup_washing_machine_switches(hass, config_entry, async_add_entities)
 
 
 class RoborockSwitch(RoborockEntity, SwitchEntity):

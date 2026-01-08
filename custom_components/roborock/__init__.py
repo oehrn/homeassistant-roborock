@@ -7,7 +7,7 @@ import logging
 from datetime import timedelta
 from pathlib import Path
 
-from roborock import RoborockException
+from roborock import RoborockException, RoborockCategory
 from roborock.web_api import RoborockApiClient
 from roborock.version_1_apis import RoborockMqttClientV1 as RoborockMqttClient
 from roborock.version_1_apis import RoborockLocalClientV1 as RoborockLocalClient
@@ -26,7 +26,7 @@ from .const import (
     PLATFORMS,
     VACUUM,
 )
-from .coordinator import RoborockDataUpdateCoordinator
+from .coordinator import RoborockDataUpdateCoordinator, RoborockWashingMachineCoordinator
 from .domain import EntryData
 from .roborock_typing import ConfigEntryData, DeviceNetwork, RoborockHassDeviceInfo
 from .store import LocalCalendarStore, STORAGE_PATH
@@ -54,7 +54,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         api_client = RoborockApiClient(username, base_url)
         _LOGGER.debug("Requesting home data")
-        home_data = await api_client.get_home_data(user_data)
+        # Use v2 API to get all devices including washing machines (Zeo)
+        home_data = await api_client.get_home_data_v2(user_data)
         hass.config_entries.async_update_entry(
             entry, data={CONF_HOME_DATA: home_data.as_dict(), **data}
         )
@@ -96,33 +97,51 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 for product in home_data.products
                 if product.id == _device.product_id
             )
-
+            
             device_info = RoborockHassDeviceInfo(
                 device=_device,
                 model=product.model,
             )
 
-            map_client = await hass.async_add_executor_job(
-                RoborockMqttClient, user_data, device_info
-            )
-
-            if not cloud_integration:
-                network = device_network.get(device_id)
-                if network is None:
-                    networking = await map_client.get_networking()
-                    network = DeviceNetwork(ip=networking.ip, mac="")
-                    device_network[device_id] = network
-                    hass.config_entries.async_update_entry(
-                        entry, data={"device_network": device_network, **data}
-                    )
-                device_info.host = network.get("ip")
-
-                main_client = RoborockLocalClient(device_info)
+            # Check if this is a washing machine (Zeo) - use special coordinator
+            if product.category == RoborockCategory.WASHING_MACHINE:
+                _LOGGER.info(
+                    "Found washing machine device '%s' (model: %s). Adding with basic support. "
+                    "Device is online: %s",
+                    _device.name,
+                    product.model,
+                    _device.online,
+                )
+                # Zeo devices only use MQTT (cloud), no local connection
+                map_client = await hass.async_add_executor_job(
+                    RoborockMqttClient, user_data, device_info
+                )
+                data_coordinator = RoborockWashingMachineCoordinator(
+                    hass, map_client, device_info
+                )
             else:
-                main_client = map_client
-            data_coordinator = RoborockDataUpdateCoordinator(
-                hass, main_client, map_client, device_info, home_data.rooms
-            )
+                # Vacuum devices - use full coordinator with local/cloud support
+                map_client = await hass.async_add_executor_job(
+                    RoborockMqttClient, user_data, device_info
+                )
+
+                if not cloud_integration:
+                    network = device_network.get(device_id)
+                    if network is None:
+                        networking = await map_client.get_networking()
+                        network = DeviceNetwork(ip=networking.ip, mac="")
+                        device_network[device_id] = network
+                        hass.config_entries.async_update_entry(
+                            entry, data={"device_network": device_network, **data}
+                        )
+                    device_info.host = network.get("ip")
+
+                    main_client = RoborockLocalClient(device_info)
+                else:
+                    main_client = map_client
+                data_coordinator = RoborockDataUpdateCoordinator(
+                    hass, main_client, map_client, device_info, home_data.rooms
+                )
             path = Path(
                 hass.config.path(
                     STORAGE_PATH.format(
@@ -145,33 +164,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return_exceptions=True,
     )
 
-    success_coordinators: list[RoborockDataUpdateCoordinator] = []
+    success_coordinators: list = []
     devices_to_remove: list[str] = []
 
     for device_id, device_entry_data in devices_entry_data.items():
-        _coordinator: RoborockDataUpdateCoordinator = device_entry_data["coordinator"]
+        _coordinator = device_entry_data["coordinator"]
 
-        # If local polling fails (timeouts etc.), fall back to the cloud (MQTT) client.
-        # This keeps the integration usable in networks where the robot is not reachable locally.
-        if (
-            not cloud_integration
-            and not _coordinator.last_update_success
-            and _coordinator.api is not _coordinator.map_api
-        ):
-            _LOGGER.warning(
-                "Device %s not reachable locally; retrying via cloud (MQTT) client",
-                device_id,
-            )
-            try:
-                await _coordinator.api.async_disconnect()
-            except RoborockException:
-                _LOGGER.debug("Failed to disconnect local client before cloud fallback")
+        # Only attempt local/cloud fallback for vacuum coordinators
+        if isinstance(_coordinator, RoborockDataUpdateCoordinator):
+            # If local polling fails (timeouts etc.), fall back to the cloud (MQTT) client.
+            # This keeps the integration usable in networks where the robot is not reachable locally.
+            if (
+                not cloud_integration
+                and not _coordinator.last_update_success
+                and _coordinator.api is not _coordinator.map_api
+            ):
+                _LOGGER.warning(
+                    "Device %s not reachable locally; retrying via cloud (MQTT) client",
+                    device_id,
+                )
+                try:
+                    await _coordinator.api.async_disconnect()
+                except RoborockException:
+                    _LOGGER.debug("Failed to disconnect local client before cloud fallback")
 
-            _coordinator.api = _coordinator.map_api
-            try:
-                await _coordinator.async_refresh()
-            except Exception:
-                _LOGGER.debug("Cloud fallback refresh failed for device %s", device_id)
+                _coordinator.api = _coordinator.map_api
+                try:
+                    await _coordinator.async_refresh()
+                except Exception:
+                    _LOGGER.debug("Cloud fallback refresh failed for device %s", device_id)
 
         if not _coordinator.last_update_success:
             await _coordinator.async_release()

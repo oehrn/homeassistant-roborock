@@ -327,11 +327,18 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Roborock vacuum sensors."""
+    from .coordinator import RoborockWashingMachineCoordinator
+    
     domain_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
 
     entities: list[RoborockSensor] = []
     for _device_id, device_entry_data in domain_data.get("devices").items():
         coordinator = device_entry_data["coordinator"]
+        
+        # Skip washing machine coordinators - they have separate sensors
+        if isinstance(coordinator, RoborockWashingMachineCoordinator):
+            continue
+            
         device_info = coordinator.data
         unique_id = slugify(device_info.device.duid)
         if device_info:
@@ -360,7 +367,9 @@ async def async_setup_entry(
         else:
             _LOGGER.warning("Failed setting up sensors no Roborock data")
 
-    async_add_entities(entities)
+    # Also set up washing machine sensors if available
+    from .washing_machine_sensor import async_setup_entry as async_setup_washing_machine_sensors
+    await async_setup_washing_machine_sensors(hass, config_entry, async_add_entities)
 
 
 class RoborockSensor(RoborockCoordinatedEntity, SensorEntity):
