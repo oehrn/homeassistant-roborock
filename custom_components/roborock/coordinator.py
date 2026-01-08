@@ -182,11 +182,78 @@ class RoborockWashingMachineCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         }
         
         # Try to get status data from washing machine
-        # Based on Zeo One schema: status (203), washing_left (218), countdown (217), error (220)
         try:
-            # Query status using MQTT - we'll implement actual commands later
-            # For now, just return basic info to avoid errors
-            pass
+            # Get all properties from washing machine
+            # This should return a list of values corresponding to the schema
+            prop_result = await self.api.send_command("get_prop", [])
+            
+            if prop_result:
+                _LOGGER.debug("Zeo One data: %s", prop_result)
+                
+                # Map the result to our data dictionary
+                # Based on Zeo One schema order
+                if isinstance(prop_result, list) and len(prop_result) > 0:
+                    # Try to parse the response
+                    # Schema IDs: 203=status, 204=mode, 205=program, 207=temp, 
+                    # 208=rinse_times, 209=spin_level, 210=drying_mode,
+                    # 217=countdown, 218=washing_left, 219=door_lock, 220=error
+                    
+                    # Since we don't know exact order, try to get specific props
+                    try:
+                        status_result = await self.api.send_command("get_prop", ["status"])
+                        if status_result:
+                            data["status"] = status_result[0] if isinstance(status_result, list) else status_result
+                    except Exception:
+                        pass
+                    
+                    try:
+                        washing_left = await self.api.send_command("get_prop", ["washing_left"])
+                        if washing_left:
+                            data["washing_left"] = washing_left[0] if isinstance(washing_left, list) else washing_left
+                    except Exception:
+                        pass
+                    
+                    try:
+                        countdown = await self.api.send_command("get_prop", ["countdown"])
+                        if countdown:
+                            data["countdown"] = countdown[0] if isinstance(countdown, list) else countdown
+                    except Exception:
+                        pass
+                    
+                    try:
+                        error = await self.api.send_command("get_prop", ["error"])
+                        if error:
+                            data["error"] = error[0] if isinstance(error, list) else error
+                    except Exception:
+                        pass
+                    
+                    # Get other properties
+                    for prop_name in ["mode", "program", "temp", "rinse_times", 
+                                     "spin_level", "drying_mode", "doorlock_state"]:
+                        try:
+                            result = await self.api.send_command("get_prop", [prop_name])
+                            if result:
+                                key = "door_lock" if prop_name == "doorlock_state" else prop_name
+                                if prop_name == "temp":
+                                    key = "temperature"
+                                data[key] = result[0] if isinstance(result, list) else result
+                        except Exception:
+                            pass
+                    
+                    # Get switch states
+                    for switch_name in ["child_lock", "detergent_set", "softener_set"]:
+                        try:
+                            result = await self.api.send_command("get_prop", [switch_name])
+                            if result:
+                                key = switch_name
+                                if switch_name == "detergent_set":
+                                    key = "auto_detergent"
+                                elif switch_name == "softener_set":
+                                    key = "auto_softener"
+                                data[key] = result[0] if isinstance(result, list) else result
+                        except Exception:
+                            pass
+                            
         except RoborockException as ex:
             _LOGGER.debug("Failed to get washing machine status: %s", ex)
         
